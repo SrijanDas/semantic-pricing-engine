@@ -105,15 +105,13 @@ export type Database = {
           confidence_score: number
           created_at: string | null
           id: number
-          quote_id: string
           total_estimate: number
           transcript: string
         }
         Insert: {
           confidence_score: number
           created_at?: string | null
-          id?: number
-          quote_id: string
+          id: number
           total_estimate: number
           transcript: string
         }
@@ -121,7 +119,6 @@ export type Database = {
           confidence_score?: number
           created_at?: string | null
           id?: number
-          quote_id?: string
           total_estimate?: number
           transcript?: string
         }
