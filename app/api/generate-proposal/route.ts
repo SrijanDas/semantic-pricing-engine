@@ -1,4 +1,4 @@
-import { getEmbedding } from "@/lib/embeddings";
+import { semanticSearch } from "@/lib/semantic-search";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -43,8 +43,10 @@ export async function POST(request: NextRequest) {
             messages: [
                 {
                     role: "system",
-                    content:
-                        "You are a construction task analyzer. Extract tasks and required materials from the transcript. For each material, estimate the quantity needed based on industry standards.",
+                    content: `You are a construction task analyzer. 
+                            Extract tasks and required materials from the transcript.
+                            For each tasks generate the possible materials required.
+                            The material names should be descriptive enough so that the name can be used for semantic searches and include the type of material (e.g., "concrete", "drywall", etc.)`,
                 },
                 {
                     role: "user",
@@ -69,10 +71,6 @@ export async function POST(request: NextRequest) {
                                                 type: "object",
                                                 properties: {
                                                     name: { type: "string" },
-                                                    quantity: {
-                                                        type: "number",
-                                                    },
-                                                    unit: { type: "string" },
                                                 },
                                             },
                                         },
@@ -96,29 +94,15 @@ export async function POST(request: NextRequest) {
         // Process each task
         const tasks: Task[] = await Promise.all(
             analysisResult.tasks.map(async (task: any) => {
-                // Search for materials in database
+                // Search for materials in database using semantic-search
                 const materialPromises = task.materials.map(
                     async (material: any) => {
-                        const embedding = await getEmbedding(material.name);
-                        const { data: matches } = await supabase.rpc(
-                            "search_materials_semantic",
-                            {
-                                query_embedding: embedding,
-                                match_threshold: 0.78,
-                                match_count: 3,
-                            }
-                        );
+                        const matches = await semanticSearch({
+                            query: material.name,
+                            limit: 1,
+                        });
 
-                        // Get best match or use fallback pricing
-                        const bestMatch = matches?.[0];
-                        const price = bestMatch.price ?? "NA";
-
-                        return {
-                            name: material.name,
-                            quantity: material.quantity,
-                            unit: material.unit,
-                            unit_price: price,
-                        };
+                        return matches;
                     }
                 );
 
