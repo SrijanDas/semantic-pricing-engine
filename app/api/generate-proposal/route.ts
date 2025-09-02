@@ -1,5 +1,4 @@
 import { semanticSearch } from "@/lib/semantic-search";
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -46,7 +45,8 @@ export async function POST(request: NextRequest) {
                     content: `You are a construction task analyzer. 
                             Extract tasks and required materials from the transcript.
                             For each tasks generate the possible materials required.
-                            The material names should be descriptive enough so that the name can be used for semantic searches and include the type of material (e.g., "concrete", "drywall", etc.)`,
+                            The material names should be descriptive enough so that the name can be used for semantic searches and include the type of material (e.g., "concrete", "drywall", etc.)
+                            Estimate material quantity required for the task`,
                 },
                 {
                     role: "user",
@@ -71,6 +71,9 @@ export async function POST(request: NextRequest) {
                                                 type: "object",
                                                 properties: {
                                                     name: { type: "string" },
+                                                    quantity: {
+                                                        type: "number",
+                                                    },
                                                 },
                                             },
                                         },
@@ -89,7 +92,6 @@ export async function POST(request: NextRequest) {
         const analysisResult = JSON.parse(
             completion.choices[0].message.function_call?.arguments || "{}"
         );
-        const supabase = await createClient();
 
         // Process each task
         const tasks: Task[] = await Promise.all(
@@ -102,7 +104,12 @@ export async function POST(request: NextRequest) {
                             limit: 1,
                         });
 
-                        return matches;
+                        return {
+                            material_name: matches[0]?.material_name,
+                            unit_price: matches[0]?.unit_price || 0,
+                            unit: matches[0]?.unit || "",
+                            quantity: material.quantity,
+                        };
                     }
                 );
 
@@ -141,6 +148,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             tasks,
+            total_estimate: tasks.reduce(
+                (sum, task) => sum + task.margin_protected_price,
+                0
+            ),
         });
     } catch (error) {
         console.error("Error generating proposal:", error);

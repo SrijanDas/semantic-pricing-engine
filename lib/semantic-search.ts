@@ -1,3 +1,4 @@
+import { Material } from "@/types";
 import { getConfidenceTier, getEmbedding } from "./embeddings";
 import { createClient } from "./supabase/server";
 
@@ -20,10 +21,12 @@ export async function semanticSearch({
         }
     );
 
-    const data = documents?.map(({ embedding, ...rest }: any) => {
-        const confidence_tier = getConfidenceTier(rest.similarity_score);
-        return { ...rest, confidence_tier };
-    });
+    const data = documents?.map(
+        ({ embedding, ...rest }: Material & { similarity_score: number }) => {
+            const confidence_tier = getConfidenceTier(rest.similarity_score);
+            return { ...rest, confidence_tier };
+        }
+    );
 
-    return data;
+    return data as Material[];
 }
