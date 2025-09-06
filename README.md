@@ -64,9 +64,8 @@ curl -X POST http://localhost:3000/api/generate-proposal \
   -d '{"transcript": "Need materials for bathroom renovation including tiles"}'
 
 # Get similar materials
-curl -X POST http://localhost:3000/api/materials \
-  -H "Content-Type: application/json" \
-  -d '{"query": "ceramic floor tiles"}'
+curl -X GET "http://localhost:3000/api/materials?query=ceramic%20tiles" \
+  -H "Accept: application/json"
 
 # Submit feedback
 curl -X POST http://localhost:3000/api/feedback \
